@@ -1,4 +1,3 @@
-import { Server } from "lucide-react";
 import type { ClientNode } from "../data";
 
 interface NodeGridProps {
@@ -9,13 +8,17 @@ interface NodeGridProps {
 export default function NodeGrid({ nodes, isOffline }: NodeGridProps) {
   return (
     <section>
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-          <Server size={14} className="text-cyan-400" />
-          Global Environment Status
-        </h2>
+      <div className="mb-4 flex items-end justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-500">
+            01 / Sites
+          </p>
+          <h2 className="mt-1 font-display text-2xl font-bold text-ink">
+            Global Environment Status
+          </h2>
+        </div>
         <span className="text-xs text-slate-500">
-          {nodes.length} Active Nodes Monitored
+          {nodes.length} sites monitored
         </span>
       </div>
 
@@ -23,37 +26,42 @@ export default function NodeGrid({ nodes, isOffline }: NodeGridProps) {
         {nodes.map((node) => (
           <div
             key={node.id}
-            className={`rounded-xl border bg-slate-900 p-4 transition-all ${
+            className={`rounded-xl border p-5 shadow-sm transition-colors ${
               isOffline
-                ? "border-amber-500/30 shadow-lg shadow-amber-950/20"
-                : "border-slate-800"
+                ? "border-amber-300 bg-amber-50/60"
+                : "border-slate-200 bg-white"
             }`}
           >
-            <div className="mb-3 flex items-start justify-between">
+            <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-slate-100">
+                <h3 className="font-display text-lg font-bold leading-tight text-ink">
                   {node.name}
                 </h3>
-                <p className="text-xs text-slate-500">{node.type}</p>
+                <p className="mt-0.5 text-xs text-slate-500">{node.type}</p>
               </div>
               <span
-                className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${
                   node.status === "Operational"
-                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-                    : "border-amber-500/20 bg-amber-500/10 text-amber-400"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-amber-300 bg-amber-100 text-amber-800"
                 }`}
               >
                 {node.status}
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 border-t border-slate-800/60 pt-2 text-xs">
-              <Metric label="LATENCY" value={`${node.latency} ms`} />
-              <Metric label="PACKET LOSS" value={`${node.packetLoss}%`} />
+            <div
+              className={`grid grid-cols-3 gap-3 border-t pt-4 ${
+                isOffline ? "border-amber-200" : "border-slate-100"
+              }`}
+            >
+              <Metric label="Latency" value={`${node.latency} ms`} />
+              <Metric label="Packet Loss" value={`${node.packetLoss}%`} />
               <Metric
-                label="LOCAL QUEUE"
-                value={`${node.queueCount} events`}
-                accent
+                label="Local Queue"
+                value={`${node.queueCount}`}
+                unit="events"
+                highlight={node.queueCount > 0}
               />
             </div>
           </div>
@@ -66,22 +74,27 @@ export default function NodeGrid({ nodes, isOffline }: NodeGridProps) {
 function Metric({
   label,
   value,
-  accent = false,
+  unit,
+  highlight = false,
 }: {
   label: string;
   value: string;
-  accent?: boolean;
+  unit?: string;
+  highlight?: boolean;
 }) {
   return (
     <div>
-      <span className="block text-[10px] text-slate-500">{label}</span>
+      <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        {label}
+      </span>
       <span
-        className={`font-mono font-semibold ${
-          accent ? "text-amber-400" : "text-slate-200"
+        className={`font-display text-2xl font-bold tabular-nums ${
+          highlight ? "text-amber-600" : "text-ink"
         }`}
       >
         {value}
       </span>
+      {unit && <span className="ml-1 text-xs text-slate-500">{unit}</span>}
     </div>
   );
 }
