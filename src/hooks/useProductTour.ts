@@ -1,8 +1,9 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import introJs from "intro.js";
 import "intro.js/introjs.css";
 
 const SEEN_KEY = "terraview-tour-seen";
+const EDGE_GAP = 12; // breathing room between the tooltip and the screen/header edges
 
 const markSeen = () => {
   try {
@@ -20,78 +21,103 @@ const hasSeen = () => {
   }
 };
 
+/** Nudge the page so the whole tooltip is visible, whichever direction we came from. */
+function ensureTooltipVisible() {
+  const tooltip = document.querySelector<HTMLElement>(".introjs-tooltip");
+  if (!tooltip) return;
+
+  const header = document.querySelector("header");
+  const topLimit = (header?.getBoundingClientRect().bottom ?? 0) + EDGE_GAP;
+  const bottomLimit = window.innerHeight - EDGE_GAP;
+  const rect = tooltip.getBoundingClientRect();
+
+  if (rect.top < topLimit) {
+    window.scrollBy({ top: rect.top - topLimit, behavior: "smooth" });
+  } else if (rect.bottom > bottomLimit) {
+    window.scrollBy({ top: rect.bottom - bottomLimit, behavior: "smooth" });
+  }
+}
+
 export function useProductTour() {
+  const [finaleOpen, setFinaleOpen] = useState(false);
+  const closeFinale = useCallback(() => setFinaleOpen(false), []);
+
   const startTour = useCallback(() => {
     markSeen();
 
-    introJs
-      .tour()
-      .setOptions({
-        steps: [
-          {
-            title: "Welcome to TerraView Ops",
-            intro:
-              "A concept demo of a site-monitoring dashboard that keeps working when a connection drops. This quick tour shows how it works. All data here is simulated.",
-          },
-          {
-            element: '[data-tour="stats"]',
-            title: "Live summary",
-            intro:
-              "A roll-up across every monitored site: average latency, packet loss, and how many events are waiting to sync. These update every couple of seconds.",
-          },
-          {
-            element: '[data-tour="nodes"]',
-            title: "Monitored sites",
-            intro:
-              "Each card is a (fictional) site. During an outage the status flips to Degraded, latency and packet loss climb, and the local queue starts filling.",
-          },
-          {
-            element: '[data-tour="chart"]',
-            title: "Live throughput",
-            intro:
-              "Network throughput and API requests, streaming in real time. Watch for the drop during an outage, then a catch-up surge once buffered data syncs.",
-          },
-          {
-            element: '[data-tour="toggle"]',
-            title: "Simulate an outage",
-            intro:
-              "This button simulates losing connectivity. The app also reacts to your real device going offline, for example by using the Offline throttle in your browser's DevTools.",
-          },
-          {
-            element: '[data-tour="queue"]',
-            title: "Offline queue",
-            intro:
-              "While offline, telemetry isn't lost. Events are written to the browser's IndexedDB, so they even survive a page refresh. When the link returns they sync automatically (the sync target is simulated).",
-          },
-          {
-            element: '[data-tour="feed"]',
-            title: "Security event feed",
-            intro:
-              "A short, in-session feed of notable events, such as connectivity loss and completed syncs, in the style of a SOC console.",
-          },
-          {
-            element: '[data-tour="log"]',
-            title: "Activity log",
-            intro:
-              "A persistent, exportable record of every connectivity change, buffered event, and sync result. Filter by type, export as JSON, or clear it.",
-          },
-          {
-            title: "Your turn",
-            intro:
-              "Click the blue connection button, wait about 10 seconds while events buffer, then switch back online and watch the queue flush. You can replay this tour anytime with Take a tour.",
-          },
-        ],
-        showProgress: true,
-        showBullets: false,
-        exitOnOverlayClick: false,
-        disableInteraction: true,
-        scrollToElement: true,
-        scrollPadding: 90,
-        nextLabel: "Next",
-        prevLabel: "Back",
-        doneLabel: "Got it",
-      })
-      .start();
+    const tour = introJs.tour().setOptions({
+      steps: [
+        {
+          title: "Welcome to TerraView Ops",
+          intro:
+            "A concept demo of a site-monitoring dashboard that keeps working when a connection drops. This quick tour shows how it works. All data here is simulated.",
+        },
+        {
+          element: '[data-tour="stats"]',
+          title: "Live summary",
+          intro:
+            "A roll-up across every monitored site: average latency, packet loss, and how many events are waiting to sync. These update every couple of seconds.",
+        },
+        {
+          element: '[data-tour="nodes"]',
+          title: "Monitored sites",
+          intro:
+            "Each card is a (fictional) site. During an outage the status flips to Degraded, latency and packet loss climb, and the local queue starts filling.",
+        },
+        {
+          element: '[data-tour="chart"]',
+          title: "Live throughput",
+          intro:
+            "Network throughput and API requests, streaming in real time. Watch for the drop during an outage, then a catch-up surge once buffered data syncs.",
+        },
+        {
+          element: '[data-tour="toggle"]',
+          title: "Simulate an outage",
+          intro:
+            "This button simulates losing connectivity. The app also reacts to your real device going offline, for example by using the Offline throttle in your browser's DevTools.",
+        },
+        {
+          element: '[data-tour="queue"]',
+          title: "Offline queue",
+          intro:
+            "While offline, telemetry isn't lost. Events are written to the browser's IndexedDB, so they even survive a page refresh. When the link returns they sync automatically (the sync target is simulated).",
+        },
+        {
+          element: '[data-tour="feed"]',
+          title: "Security event feed",
+          intro:
+            "A short, in-session feed of notable events, such as connectivity loss and completed syncs, in the style of a SOC console.",
+        },
+        {
+          element: '[data-tour="log"]',
+          title: "Activity log",
+          intro:
+            "A persistent, exportable record of every connectivity change, buffered event, and sync result. Filter by type, export as JSON, or clear it.",
+        },
+      ],
+      showProgress: true,
+      showBullets: false,
+      exitOnOverlayClick: false,
+      disableInteraction: true,
+      scrollToElement: true,
+      scrollTo: "tooltip",
+      scrollPadding: 90,
+      nextLabel: "Next",
+      prevLabel: "Back",
+      doneLabel: "Next", // the last tour step flows into our own "Your turn" modal
+    });
+
+    // After each step renders, verify the tooltip is fully on screen
+    tour.onAfterChange(() => {
+      setTimeout(ensureTooltipVisible, 150);
+    });
+
+    // Finishing the tour (not skipping it) opens the centered finale
+    tour.onComplete(() => {
+      setFinaleOpen(true);
+    });
+
+    tour.start();
   }, []);
 
   // Auto-start once for first-time visitors
@@ -101,5 +127,5 @@ export function useProductTour() {
     return () => clearTimeout(timer);
   }, [startTour]);
 
-  return { startTour };
+  return { startTour, finaleOpen, closeFinale };
 }

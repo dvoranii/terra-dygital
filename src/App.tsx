@@ -6,6 +6,7 @@ import ThroughputChart from "./components/ThroughputChart";
 import OfflineQueuePanel from "./components/OfflineQueuePanel";
 import SecurityFeed from "./components/SecurityFeed";
 import ActivityLogDrawer from "./components/ActivityLogDrawer";
+import TourFinale from "./components/TourFinale";
 import { useOfflineSync } from "./hooks/useOfflineSync";
 import { useLiveMetrics } from "./hooks/useLiveMetrics";
 import { useActivityLog } from "./hooks/useActivityLog";
@@ -15,7 +16,7 @@ import { INITIAL_NODES, type ClientNode } from "./data";
 export default function App() {
   const [logOpen, setLogOpen] = useState(false);
   const { entries, log, clear } = useActivityLog();
-  const { startTour } = useProductTour();
+  const { startTour, finaleOpen, closeFinale } = useProductTour();
 
   const {
     isOffline,
@@ -90,6 +91,8 @@ export default function App() {
         onClose={() => setLogOpen(false)}
         onClear={clear}
       />
+
+      <TourFinale open={finaleOpen} onClose={closeFinale} />
     </div>
   );
 }
